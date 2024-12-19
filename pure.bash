@@ -134,10 +134,22 @@ if [[ -n $(command -v git) ]]; then
 	PROMPT_COMMAND="__pure_update_git_status; ${PROMPT_COMMAND}"
 fi
 
+# detect remote session and if so display user and host
+if [[ -n "$SSH_CLIENT" ]] \
+   || [[ -n "$SSH_TTY" ]] \
+   || [[ -n "$SSH_CONNECTION" ]] \
+   || [[ $(pstree -s $$) = *sshd* ]] \
+   || [[ $(pstree -s $$) = *wezterm-mux-ser* ]] 
+then
+    readonly USER_HOST="${CYAN}[${WHITE}\u@\h${CYAN}] "
+else
+	readonly USER_HOST=""
+fi
+
 PROMPT_COMMAND="__pure_update_prompt_color; ${PROMPT_COMMAND}"
 
 
-readonly FIRST_LINE="${CYAN}\w \${pure_git_status}\n"
+readonly FIRST_LINE="${USER_HOST}${CYAN}\w \${pure_git_status}\n"
 # raw using of $ANY_COLOR (or $(tput setaf ***)) here causes a creepy bug when go back history with up arrow key
 # I couldn't find why it occurs
 readonly SECOND_LINE="\[\${pure_prompt_color}\]${pure_prompt_symbol}\[$RESET\] "

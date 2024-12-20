@@ -180,4 +180,4 @@ command -v git > /dev/null 2>&1 \
 _pure_global[first_line]="${_pure_global[user_host]}${_pure_color[PROMPT]}\w \${_pure_global[git_status]}"
 _pure_global[second_line]="\[\${_pure_global[prompt_color]}\]\${_pure_global[prompt_text]}\[${_pure_color[RESET]}\] "
 PS1="\n${_pure_global[first_line]}\n${_pure_global[second_line]}"
-PS2="\[${_pure_color[MULTILINE]}\]\${_pure_global[prompt_text]}\[${_pure_color[RESET]}\]     "
+PS2="\[${_pure_color[MULTILINE]}\]${_pure_symbol[PROMPT]}\[${_pure_color[RESET]}\]     "

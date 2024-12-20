@@ -6,154 +6,153 @@
 #
 # Author: Hiroshi Krashiki(Krashikiworks)
 # released under MIT License, see LICENSE
-
-# Colors
-readonly BLACK=$(tput setaf 0)
-readonly RED=$(tput setaf 1)
-readonly GREEN=$(tput setaf 2)
-readonly YELLOW=$(tput setaf 3)
-readonly BLUE=$(tput setaf 4)
-readonly MAGENTA=$(tput setaf 5)
-readonly CYAN=$(tput setaf 6)
-readonly WHITE=$(tput setaf 7)
-readonly BRIGHT_BLACK=$(tput setaf 8)
-readonly BRIGHT_RED=$(tput setaf 9)
-readonly BRIGHT_GREEN=$(tput setaf 10)
-readonly BRIGHT_YELLOW=$(tput setaf 11)
-readonly BRIGHT_BLUE=$(tput setaf 12)
-readonly BRIGHT_MAGENTA=$(tput setaf 13)
-readonly BRIGHT_CYAN=$(tput setaf 14)
-readonly BRIGHT_WHITE=$(tput setaf 15)
-
-readonly RESET=$(tput sgr0)
-
-# symbols
-pure_prompt_symbol="❯"
-pure_symbol_unpulled="⇣"
-pure_symbol_unpushed="⇡"
-pure_symbol_dirty="*"
-# pure_git_stash_symbol="≡"
-
-# if this value is true, remote status update will be async
-pure_git_async_update=false
-pure_git_raw_remote_status="+0 -0"
+#
+# Modified:
+# - Cleaned up namespace a bit
+# - Did some refactoring
+# - Added host detection
+# - Added color configuration (by editing script)
+# - Indents PS2 four spaces
+# - Improved the compatibility of the grep command for BSD and Linux
+#
+# Author: Steve Hay (stvhay)
 
 
-__pure_echo_git_remote_status() {
+#### CONSTANTS ###############################################################
 
-	# get unpulled & unpushed status
-	if ${pure_git_async_update}; then
-		# do async
-		# FIXME: this async execution doesn't change pure_git_raw_remote_status. so remote status never changes in async mode
-		# FIXME: async mode takes as long as sync mode
-		pure_git_raw_remote_status=$(git status --porcelain=2 --branch | grep --only-matching --perl-regexp '\+\d+ \-\d+') &
+# tput color table
+declare -A _pure_color_table=(
+	[BLACK]=$(tput setaf 0)
+	[RED]=$(tput setaf 1)
+	[GREEN]=$(tput setaf 2)
+	[YELLOW]=$(tput setaf 3)
+	[BLUE]=$(tput setaf 4)
+	[MAGENTA]=$(tput setaf 5)
+	[CYAN]=$(tput setaf 6)
+	[WHITE]=$(tput setaf 7)
+	[BRIGHT_BLACK]=$(tput setaf 8)
+	[BRIGHT_RED]=$(tput setaf 9)
+	[BRIGHT_GREEN]=$(tput setaf 10)
+	[BRIGHT_YELLOW]=$(tput setaf 11)
+	[BRIGHT_BLUE]=$(tput setaf 12)
+	[BRIGHT_MAGENTA]=$(tput setaf 13)
+	[BRIGHT_CYAN]=$(tput setaf 14)
+	[BRIGHT_WHITE]=$(tput setaf 15)
+)
+
+
+#### CONFIGURATION ###########################################################
+
+# color configuration
+declare -A _pure_color=(
+	[UNPULLED]=${_pure_color_table[BRIGHT_RED]}
+	[UNPUSHED]=${_pure_color_table[BRIGHT_BLUE]}
+	[STATUS]=${_pure_color_table[BRIGHT_BLACK]}
+	[USER]=${_pure_color_table[BRIGHT_MAGENTA]}
+	[ROOT]=${_pure_color_table[BRIGHT_YELLOW]}
+	[FAILED]=${_pure_color_table[RED]}
+	[PROMPT]=${_pure_color_table[CYAN]}
+	[HOST]=${_pure_color_table[WHITE]}
+	[MULTILINE]=${_pure_color_table[BLUE]}
+	[RESET]=$(tput sgr0)
+)
+
+# symbol configuration
+declare -A _pure_symbol=(
+	[PROMPT]="❯"
+	[UNPULLED]="⇣"
+	[UNPUSHED]="⇡"
+	[DIRTY]="*"
+	[STASH]="≡")
+
+
+#### FUNCTIONS ###############################################################
+
+# no unpulled has -0 / no unpushed has +0
+_pure_git_unpulled() { [[ "-0" != $(git status --porcelain=2 --branch | grep -Eo "\-[0-9]") ]]; }
+_pure_git_unpushed() { [[ "+0" != $(git status --porcelain=2 --branch | grep -Eo "\+[0-9]") ]]; }
+_pure_echo_git_remote_status()
+{
+	# prints the stylized remote status
+	_pure_git_unpulled && printf "%s" "${_pure_color[UNPULLED]}${_pure_symbol[UNPULLED]}${_pure_color[RESET]}"
+	_pure_git_unpushed && printf "%s" "${_pure_color[UNPUSHED]}${_pure_symbol[UNPUSHED]}${_pure_color[RESET]}"
+	printf "\n"
+}
+
+# Updates _pure_git_status for use in the prompt.
+_pure_git_intree()       { [[ $(git rev-parse --is-inside-work-tree 2> /dev/null) == "true" ]]; }
+_pure_git_show_current() { git branch --show-current; }
+_pure_git_clean()        { git diff --quiet; }
+_pure_git_show_remote()  { [[ -n $(git remote show) ]]; }
+_pure_update_git_status()
+{
+	local dirty remote
+	if _pure_git_intree
+	then
+		_pure_git_clean       || dirty=${_pure_symbol[DIRTY]}
+		_pure_git_show_remote && remote=$(_pure_echo_git_remote_status)
+
+		_pure_git_status="${_pure_color[STATUS]}$(_pure_git_show_current)$dirty${_pure_color[RESET]} $remote"
 	else
-		# do sync
-		pure_git_raw_remote_status=$(git status --porcelain=2 --branch | grep --only-matching --perl-regexp '\+\d+ \-\d+')
-	fi
-
-	# shape raw status and check unpulled commit
-	local readonly UNPULLED=$(echo ${pure_git_raw_remote_status} | grep --only-matching --perl-regexp '\-\d')
-	if [[ ${UNPULLED} != "-0" ]]; then
-		pure_git_unpulled=true
-	else
-		pure_git_unpulled=false
-	fi
-
-	# unpushed commit too
-	local readonly UNPUSHED=$(echo ${pure_git_raw_remote_status} | grep --only-matching --perl-regexp '\+\d')
-	if [[ ${UNPUSHED} != "+0" ]]; then
-		pure_git_unpushed=true
-	else
-		pure_git_unpushed=false
-	fi
-
-	# if unpulled -> ⇣
-	# if unpushed -> ⇡
-	# if both (branched from remote) -> ⇣⇡
-	if ${pure_git_unpulled}; then
-
-		if ${pure_git_unpushed}; then
-			echo "${RED}${pure_symbol_unpulled}${pure_symbol_unpushed}${RESET}"
-		else
-			echo "${BRIGHT_RED}${pure_symbol_unpulled}${RESET}"
-		fi
-
-	elif ${pure_git_unpushed}; then
-		echo "${BRIGHT_BLUE}${pure_symbol_unpushed}${RESET}"
+		_pure_git_status=""
 	fi
 }
 
-__pure_update_git_status() {
 
-	local git_status=""
+# if the last command failed, change prompt color by updating _pure_prompt_color
+_pure_echo_prompt_color()
+{
+	[[ $1 = 0 ]] \
+		&& printf "%s" "${_pure_user_color}" \
+		|| printf "%s" "${_pure_color[FAILED]}"
+}
+_pure_update_prompt_color() { _pure_prompt_color=$(_pure_echo_prompt_color $?); }
 
-		# if current directory isn't git repository, skip this
-		if [[ $(git rev-parse --is-inside-work-tree 2> /dev/null) == "true" ]]; then
 
-			git_status="$(git branch --show-current)"
-
-			# check clean/dirty
-			git_status="${git_status}$(git diff --quiet || echo "${pure_symbol_dirty}")"
-
-			# coloring
-			git_status="${BRIGHT_BLACK}${git_status}${RESET}"
-
-			# if repository have no remote, skip this
-			if [[ -n $(git remote show) ]]; then
-				git_status="${git_status} $(__pure_echo_git_remote_status)"
-			fi
-		fi
-
-	pure_git_status=${git_status}
+# attempts to detect whether there is a remote session
+_pure_remote_session()
+{
+	   [[ -n "$SSH_CLIENT" ]] \
+	|| [[ -n "$SSH_TTY" ]] \
+ 	|| [[ -n "$SSH_CONNECTION" ]] \
+ 	|| [[ $(pstree -s $$) = *sshd* ]] \
+	|| [[ $(pstree -s $$) = *wezterm-mux-ser* ]] \
+	|| [[ -n "$_pure_test_remote" ]]	
 }
 
-# if last command failed, change prompt color
-__pure_echo_prompt_color() {
 
-	if [[ $? = 0 ]]; then
-		echo ${pure_user_color}
-	else
-		echo ${RED}
-	fi
+#### INITIALIZATION ##########################################################
 
-}
+# save/reset $PROMPT_COMMAND for script idempotence
+[[ -z "$_pure_first_time" ]] \
+	&& _pure_first_time="false" \
+	&& _pure_original_prompt_command=$PROMPT_COMMAND
+PROMPT_COMMAND="${_pure_original_prompt_command}"
 
-__pure_update_prompt_color() {
-	pure_prompt_color=$(__pure_echo_prompt_color)
-}
+# set user color
+[[ ${UID} = 0 ]] \
+	&& _pure_user_color=${_pure_color[ROOT]} \
+	|| _pure_user_color=${_pure_color[USER]}
 
-# if user is root, prompt is BRIGHT_YELLOW
-case ${UID} in
-	0) pure_user_color=${BRIGHT_YELLOW} ;;
-	*) pure_user_color=${BRIGHT_MAGENTA} ;;
-esac
+# set user and host if its a remote session
+_pure_remote_session \
+	&& _pure_user_host="${_pure_color[PROMPT]}[${_pure_color[HOST]}\u@\h${_pure_color[PROMPT]}] " \
+	|| _pure_user_host=""
+
+
+#### RUN EVERY PROMPT ########################################################
+
+# prompt color update must be first because it checks exit status
+PROMPT_COMMAND="_pure_update_prompt_color; ${PROMPT_COMMAND}"
 
 # if git isn't installed when shell launches, git integration isn't activated
-if [[ -n $(command -v git) ]]; then
-	PROMPT_COMMAND="__pure_update_git_status; ${PROMPT_COMMAND}"
-fi
-
-# detect remote session and if so display user and host
-if [[ -n "$SSH_CLIENT" ]] \
-   || [[ -n "$SSH_TTY" ]] \
-   || [[ -n "$SSH_CONNECTION" ]] \
-   || [[ $(pstree -s $$) = *sshd* ]] \
-   || [[ $(pstree -s $$) = *wezterm-mux-ser* ]] 
-then
-    readonly USER_HOST="${CYAN}[${WHITE}\u@\h${CYAN}] "
-else
-	readonly USER_HOST=""
-fi
-
-PROMPT_COMMAND="__pure_update_prompt_color; ${PROMPT_COMMAND}"
+command -v git > /dev/null 2>&1 \
+	&& PROMPT_COMMAND+="_pure_update_git_status;"
 
 
-readonly FIRST_LINE="${USER_HOST}${CYAN}\w \${pure_git_status}\n"
-# raw using of $ANY_COLOR (or $(tput setaf ***)) here causes a creepy bug when go back history with up arrow key
-# I couldn't find why it occurs
-readonly SECOND_LINE="\[\${pure_prompt_color}\]${pure_prompt_symbol}\[$RESET\] "
-PS1="\n${FIRST_LINE}${SECOND_LINE}"
+#### SET PROMPT ##############################################################
 
-# Multiline command
-PS2="\[$BLUE\]${prompt_symbol}\[$RESET\] "
+_pure_first_line="${_pure_user_host}${_pure_color[PROMPT]}\w \$_pure_git_status"
+_pure_second_line="\[\${_pure_prompt_color}\]${_pure_symbol[PROMPT]}\[${_pure_color[RESET]}\] "
+PS1="\n${_pure_first_line}\n${_pure_second_line}"
+PS2="\[${_pure_color[MULTILINE]}\]${_pure_symbol[PROMPT]}\[${_pure_color[RESET]}\]     "

@@ -34,7 +34,7 @@ just edit the configuration section in the script to change the way things look 
     # symbol configuration
     declare -A _pure_symbol=(
         [PROMPT]="❯"
-        [PROMPT_FAIL]="!"
+        [PROMPT_FAIL]="⚠"
         [UNPULLED]="⇣"
         [UNPUSHED]="⇡"
         [DIRTY]="*"

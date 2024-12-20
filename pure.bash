@@ -71,7 +71,7 @@ declare -A _pure_color=(
 # symbol configuration
 declare -A _pure_symbol=(
 	[PROMPT]="❯"
-	[PROMPT_FAIL]="!"
+	[PROMPT_FAIL]="⚠"
 	[UNPULLED]="⇣"
 	[UNPUSHED]="⇡"
 	[DIRTY]="*"

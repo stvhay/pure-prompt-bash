@@ -128,6 +128,15 @@ _pure_remote_session()
 	&& _pure_original_prompt_command=$PROMPT_COMMAND
 PROMPT_COMMAND="${_pure_original_prompt_command}"
 
+# Clear colors if tput missing
+if ! command -v tput > /dev/null 2>&1
+then
+    for color in "${!_pure_color_table[@]}"; do
+        _pure_color_table[$color]=""
+    done
+    _pure_color[RESET]=""
+fi
+
 # set user color
 [[ ${UID} = 0 ]] \
 	&& _pure_user_color=${_pure_color[ROOT]} \

@@ -141,8 +141,9 @@ _pure_remote_session()
 # save/reset $PROMPT_COMMAND for script idempotence
 [[ -z "${_pure_global[first_time]}" ]] \
 	&& _pure_global[first_time]="false" \
-	&& _pure_global[original_prompt_command]=$PROMPT_COMMAND
+	&& _pure_global[original_prompt_command]="${PROMPT_COMMAND}"
 PROMPT_COMMAND="${_pure_global[original_prompt_command]}"
+PROMPT_COMMAND=${PROMPT_COMMAND:+${PROMPT_COMMAND%;};}  # ensure PROMPT_COMMAND ends in ;
 
 # Clear colors if tput missing
 if ! command -v tput > /dev/null 2>&1
@@ -171,7 +172,7 @@ PROMPT_COMMAND="_pure_update_prompt; ${PROMPT_COMMAND}"
 
 # if git isn't installed when shell launches, git integration isn't activated
 command -v git > /dev/null 2>&1 \
-	&& PROMPT_COMMAND+="_pure_update_git_status;"
+	&& PROMPT_COMMAND+=" _pure_update_git_status;"
 
 
 #### SET PROMPT ##############################################################

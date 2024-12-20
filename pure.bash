@@ -46,6 +46,7 @@ declare -A _pure_global
 # original_prompt_command / saved before script runs
 # user_color              / tracks the color of the user
 # prompt_color            / tracks the color of the prompt
+# prompt_text			  / tracks the text of the prompt
 # user_host               / text to display for user and host
 # first_line              / text for first line of prompt
 # second_line             / text for second line of prompt
@@ -70,6 +71,7 @@ declare -A _pure_color=(
 # symbol configuration
 declare -A _pure_symbol=(
 	[PROMPT]="❯"
+	[PROMPT_FAIL]="!"
 	[UNPULLED]="⇣"
 	[UNPUSHED]="⇡"
 	[DIRTY]="*"
@@ -109,14 +111,18 @@ _pure_update_git_status()
 }
 
 
-# if the last command failed, change prompt color by updating prompt_color
-_pure_echo_prompt_color()
-{
-	[[ $1 = 0 ]] \
-		&& printf "%s" "${_pure_global[user_color]}" \
-		|| printf "%s" "${_pure_color[FAILED]}"
+# if the last command failed, change prompt color and text
+_pure_update_prompt() 
+{ 
+	if [[ $? = 0 ]]
+	then
+		_pure_global[prompt_text]=${_pure_symbol[PROMPT]}
+		_pure_global[prompt_color]=${_pure_global[user_color]}
+	else
+		_pure_global[prompt_text]=${_pure_symbol[PROMPT_FAIL]}
+		_pure_global[prompt_color]=${_pure_color[FAILED]}
+	fi
 }
-_pure_update_prompt_color() { _pure_global[prompt_color]=$(_pure_echo_prompt_color $?); }
 
 
 # attempts to detect whether there is a remote session
@@ -161,7 +167,7 @@ _pure_remote_session \
 #### RUN EVERY PROMPT ########################################################
 
 # prompt color update must be first because it checks exit status
-PROMPT_COMMAND="_pure_update_prompt_color; ${PROMPT_COMMAND}"
+PROMPT_COMMAND="_pure_update_prompt; ${PROMPT_COMMAND}"
 
 # if git isn't installed when shell launches, git integration isn't activated
 command -v git > /dev/null 2>&1 \
@@ -170,7 +176,8 @@ command -v git > /dev/null 2>&1 \
 
 #### SET PROMPT ##############################################################
 
+# Note: Variables that are updated/dynamic need to be escaped with a backslash.
 _pure_global[first_line]="${_pure_global[user_host]}${_pure_color[PROMPT]}\w \${_pure_global[git_status]}"
-_pure_global[second_line]="\[\${_pure_global[prompt_color]}\]${_pure_symbol[PROMPT]}\[${_pure_color[RESET]}\] "
+_pure_global[second_line]="\[\${_pure_global[prompt_color]}\]\${_pure_global[prompt_text]}\[${_pure_color[RESET]}\] "
 PS1="\n${_pure_global[first_line]}\n${_pure_global[second_line]}"
-PS2="\[${_pure_color[MULTILINE]}\]${_pure_symbol[PROMPT]}\[${_pure_color[RESET]}\]     "
+PS2="\[${_pure_color[MULTILINE]}\]\${_pure_global[prompt_text]}\[${_pure_color[RESET]}\]     "

@@ -40,6 +40,16 @@ declare -A _pure_color_table=(
 	[BRIGHT_WHITE]=$(tput setaf 15)
 )
 
+declare -A _pure_global
+# git_status              / stores the text to display for git status
+# first_time              / blank if first run of script
+# original_prompt_command / saved before script runs
+# user_color              / tracks the color of the user
+# prompt_color            / tracks the color of the prompt
+# user_host               / text to display for user and host
+# first_line              / text for first line of prompt
+# second_line             / text for second line of prompt
+
 
 #### CONFIGURATION ###########################################################
 
@@ -79,7 +89,7 @@ _pure_echo_git_remote_status()
 	printf "\n"
 }
 
-# Updates _pure_git_status for use in the prompt.
+# Updates git_status for use in the prompt.
 _pure_git_intree()       { [[ $(git rev-parse --is-inside-work-tree 2> /dev/null) == "true" ]]; }
 _pure_git_show_current() { git branch --show-current; }
 _pure_git_clean()        { git diff --quiet; }
@@ -92,21 +102,21 @@ _pure_update_git_status()
 		_pure_git_clean       || dirty=${_pure_symbol[DIRTY]}
 		_pure_git_show_remote && remote=$(_pure_echo_git_remote_status)
 
-		_pure_git_status="${_pure_color[STATUS]}$(_pure_git_show_current)$dirty${_pure_color[RESET]} $remote"
+		_pure_global[git_status]="${_pure_color[STATUS]}$(_pure_git_show_current)$dirty${_pure_color[RESET]} $remote"
 	else
-		_pure_git_status=""
+		_pure_global[git_status]=""
 	fi
 }
 
 
-# if the last command failed, change prompt color by updating _pure_prompt_color
+# if the last command failed, change prompt color by updating prompt_color
 _pure_echo_prompt_color()
 {
 	[[ $1 = 0 ]] \
-		&& printf "%s" "${_pure_user_color}" \
+		&& printf "%s" "${_pure_global[user_color]}" \
 		|| printf "%s" "${_pure_color[FAILED]}"
 }
-_pure_update_prompt_color() { _pure_prompt_color=$(_pure_echo_prompt_color $?); }
+_pure_update_prompt_color() { _pure_global[prompt_color]=$(_pure_echo_prompt_color $?); }
 
 
 # attempts to detect whether there is a remote session
@@ -123,10 +133,10 @@ _pure_remote_session()
 #### INITIALIZATION ##########################################################
 
 # save/reset $PROMPT_COMMAND for script idempotence
-[[ -z "$_pure_first_time" ]] \
-	&& _pure_first_time="false" \
-	&& _pure_original_prompt_command=$PROMPT_COMMAND
-PROMPT_COMMAND="${_pure_original_prompt_command}"
+[[ -z "${_pure_global[first_time]}" ]] \
+	&& _pure_global[first_time]="false" \
+	&& _pure_global[original_prompt_command]=$PROMPT_COMMAND
+PROMPT_COMMAND="${_pure_global[original_prompt_command]}"
 
 # Clear colors if tput missing
 if ! command -v tput > /dev/null 2>&1
@@ -139,13 +149,13 @@ fi
 
 # set user color
 [[ ${UID} = 0 ]] \
-	&& _pure_user_color=${_pure_color[ROOT]} \
-	|| _pure_user_color=${_pure_color[USER]}
+	&& _pure_global[user_color]=${_pure_color[ROOT]} \
+	|| _pure_global[user_color]=${_pure_color[USER]}
 
 # set user and host if its a remote session
 _pure_remote_session \
-	&& _pure_user_host="${_pure_color[PROMPT]}[${_pure_color[HOST]}\u@\h${_pure_color[PROMPT]}] " \
-	|| _pure_user_host=""
+	&& _pure_global[user_host]="${_pure_color[PROMPT]}[${_pure_color[HOST]}\u@\h${_pure_color[PROMPT]}] " \
+	|| _pure_global[user_host]=""
 
 
 #### RUN EVERY PROMPT ########################################################
@@ -160,7 +170,7 @@ command -v git > /dev/null 2>&1 \
 
 #### SET PROMPT ##############################################################
 
-_pure_first_line="${_pure_user_host}${_pure_color[PROMPT]}\w \$_pure_git_status"
-_pure_second_line="\[\${_pure_prompt_color}\]${_pure_symbol[PROMPT]}\[${_pure_color[RESET]}\] "
-PS1="\n${_pure_first_line}\n${_pure_second_line}"
+_pure_global[first_line]="${_pure_global[user_host]}${_pure_color[PROMPT]}\w \${_pure_global[git_status]}"
+_pure_global[second_line]="\[\${_pure_global[prompt_color]}\]${_pure_symbol[PROMPT]}\[${_pure_color[RESET]}\] "
+PS1="\n${_pure_global[first_line]}\n${_pure_global[second_line]}"
 PS2="\[${_pure_color[MULTILINE]}\]${_pure_symbol[PROMPT]}\[${_pure_color[RESET]}\]     "

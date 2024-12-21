@@ -148,7 +148,8 @@ PROMPT_COMMAND=${PROMPT_COMMAND:+${PROMPT_COMMAND%;};}  # ensure PROMPT_COMMAND 
 # Clear colors if tput missing
 if ! command -v tput > /dev/null 2>&1
 then
-    for color in "${!_pure_color_table[@]}"; do
+    for color in "${!_pure_color_table[@]}"
+	do
         _pure_color_table[$color]=""
     done
     _pure_color[RESET]=""

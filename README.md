@@ -5,7 +5,7 @@ Inspired by [sindresorhus/pure](https://github.com/sindresorhus/pure)
 
 ![Shell Images](image.png "Shell Images")
 
-## Install
+## install
 
 just clone this repository (or just copy pure.bash) anywhere, and add
 
@@ -13,7 +13,7 @@ just clone this repository (or just copy pure.bash) anywhere, and add
 
 to your `.bashrc`
 
-## Configure
+## configure
 
 just edit the configuration section in the script to change the way things look a bit
 
@@ -43,10 +43,10 @@ just edit the configuration section in the script to change the way things look 
         [PS1]="\w "
         [INDENT]="    ")
 
-## Uninstall
+## uninstall
 
 just remove what you downloaded, and delete `source` command from your `.bashrc`
 
-## License
+## license
 
-MIT License. See LICENSE.
+mit license. See LICENSE.

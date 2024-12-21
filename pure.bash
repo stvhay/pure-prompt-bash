@@ -58,6 +58,7 @@ declare -A _pure_global
 declare -A _pure_color=(
 	[UNPULLED]=${_pure_color_table[BRIGHT_RED]}
 	[UNPUSHED]=${_pure_color_table[BRIGHT_BLUE]}
+	[STASH]=${_pure_color_table[YELLOW]}
 	[STATUS]=${_pure_color_table[BRIGHT_BLACK]}
 	[USER]=${_pure_color_table[BRIGHT_MAGENTA]}
 	[ROOT]=${_pure_color_table[BRIGHT_YELLOW]}
@@ -96,21 +97,29 @@ _pure_echo_git_remote_status()
 	printf "\n"
 }
 
+_pure_echo_git_stash_status()
+{
+	printf "%s" "${_pure_color[STASH]}${_pure_symbol[STASH]}${_pure_color[RESET]}"
+}
+
 # Updates git_status for use in the prompt.
 _pure_git_intree()       { [[ $(git rev-parse --is-inside-work-tree 2> /dev/null) == "true" ]]; }
 _pure_git_show_current() { git branch --show-current; }
 _pure_git_clean()        { git diff --quiet; }
 _pure_git_show_remote()  { [[ -n $(git remote show) ]]; }
+_pure_git_show_stash()   { [ -f .git/refs/stash ]; }
 _pure_update_git_status()
 {
-	local dirty remote
+	local dirty remote stash
 	if _pure_git_intree
 	then
 		_pure_git_clean \
 			|| dirty=${_pure_symbol[DIRTY]}
 		_pure_git_show_remote \
-			&& remote=$(_pure_echo_git_remote_status)
-		_pure_global[git_status]="${_pure_color[STATUS]}$(_pure_git_show_current)$dirty${_pure_color[RESET]} $remote"
+			&& remote=" $(_pure_echo_git_remote_status)" 
+		_pure_git_show_stash \
+			&& stash=" $(_pure_echo_git_stash_status)"
+		_pure_global[git_status]="${_pure_color[STATUS]}$(_pure_git_show_current)$dirty${_pure_color[RESET]}${remote}${stash}"
 	else
 		_pure_global[git_status]=""
 	fi

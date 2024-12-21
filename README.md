@@ -21,6 +21,7 @@ just edit the configuration section in the script to change the way things look 
     declare -A _pure_color=(
         [UNPULLED]=${_pure_color_table[BRIGHT_RED]}
         [UNPUSHED]=${_pure_color_table[BRIGHT_BLUE]}
+        [STASH]=${_pure_color_table[YELLOW]}
         [STATUS]=${_pure_color_table[BRIGHT_BLACK]}
         [USER]=${_pure_color_table[BRIGHT_MAGENTA]}
         [ROOT]=${_pure_color_table[BRIGHT_YELLOW]}
@@ -38,7 +39,9 @@ just edit the configuration section in the script to change the way things look 
         [UNPULLED]="⇣"
         [UNPUSHED]="⇡"
         [DIRTY]="*"
-        [STASH]="≡")
+        [STASH]="≡"
+        [PS1]="\w "
+        [INDENT]="    ")
 
 ## Uninstall
 

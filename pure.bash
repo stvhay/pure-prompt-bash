@@ -50,7 +50,7 @@ declare -A _pure_global
 # user_host               / text to display for user and host
 # first_line              / text for first line of prompt
 # second_line             / text for second line of prompt
-
+# display_user_host       / default is only remote (empty); always/never also options
 
 #### CONFIGURATION ###########################################################
 
@@ -75,7 +75,8 @@ declare -A _pure_symbol=(
 	[UNPULLED]="⇣"
 	[UNPUSHED]="⇡"
 	[DIRTY]="*"
-	[STASH]="≡")
+	[STASH]="≡"
+	[PS1]="\w ")
 
 
 #### FUNCTIONS ###############################################################
@@ -152,13 +153,18 @@ _pure_set_user_color()
 
 
 # attempts to detect whether there is a remote session
+_pure_detect_remote_session()
+{
+	   [[ -n "$SSH_CLIENT" ]] \
+	|| [[ -n "$SSH_TTY" ]] \
+ 	|| [[ -n "$SSH_CONNECTION" ]] \
+	|| command -v pstree > /dev/null 2>&1 && pstree -s $$ | grep -q -E "sshd|wezterm-mux-ser" \
+	|| [[ -n "$_pure_test_remote" ]]
+}
 _pure_set_remote_session()
 {
-	if     [[ -n "$SSH_CLIENT" ]] \
-		|| [[ -n "$SSH_TTY" ]] \
- 		|| [[ -n "$SSH_CONNECTION" ]] \
-		|| command -v pstree > /dev/null 2>&1 && pstree -s $$ | grep -q -E "sshd|wezterm-mux-ser" \
-		|| [[ -n "$_pure_test_remote" ]]
+	if  [[ ${_pure_global[display_user_host]} = "always" ]] || \
+		[[ ! ${_pure_global[display_user_host]} = "never" ]] && _pure_detect_remote_session
 	then
 		_pure_global[user_host]="${_pure_color[PROMPT]}[${_pure_color[HOST]}\u@\h${_pure_color[PROMPT]}] "
 	else
@@ -184,7 +190,7 @@ command -v git > /dev/null 2>&1 \
 	&& PROMPT_COMMAND+=" _pure_update_git_status;"
 
 # Note: Variables that are updated/dynamic need to be escaped with a backslash.
-_pure_global[first_line]="${_pure_global[user_host]}${_pure_color[PROMPT]}\w \${_pure_global[git_status]}"
+_pure_global[first_line]="${_pure_global[user_host]}${_pure_color[PROMPT]}${_pure_symbol[PS1]}\${_pure_global[git_status]}"
 _pure_global[second_line]="\[\${_pure_global[prompt_color]}\]\${_pure_global[prompt_text]}\[${_pure_color[RESET]}\] "
 PS1="\n${_pure_global[first_line]}\n${_pure_global[second_line]}"
 PS2="\[${_pure_color[MULTILINE]}\]${_pure_symbol[PROMPT]}\[${_pure_color[RESET]}\]     "

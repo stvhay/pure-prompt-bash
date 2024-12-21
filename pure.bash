@@ -81,13 +81,16 @@ declare -A _pure_symbol=(
 #### FUNCTIONS ###############################################################
 
 # no unpulled has -0 / no unpushed has +0
-_pure_git_unpulled() { [[ "-0" != $(git status --porcelain=2 --branch | grep -Eo "\-[0-9]") ]]; }
-_pure_git_unpushed() { [[ "+0" != $(git status --porcelain=2 --branch | grep -Eo "\+[0-9]") ]]; }
+_pure_git_lines()    { git status --porcelain=2 --branch | grep -Eo "\$1[0-9]"; }
+_pure_git_unpulled() { [[ "-0" != $(_pure_git_lines "-") ]]; }
+_pure_git_unpushed() { [[ "+0" != $(_pure_git_lines "+") ]]; }
 _pure_echo_git_remote_status()
 {
 	# prints the stylized remote status
-	_pure_git_unpulled && printf "%s" "${_pure_color[UNPULLED]}${_pure_symbol[UNPULLED]}${_pure_color[RESET]}"
-	_pure_git_unpushed && printf "%s" "${_pure_color[UNPUSHED]}${_pure_symbol[UNPUSHED]}${_pure_color[RESET]}"
+	_pure_git_unpulled \
+		&& printf "%s" "${_pure_color[UNPULLED]}${_pure_symbol[UNPULLED]}${_pure_color[RESET]}"
+	_pure_git_unpushed \
+		&& printf "%s" "${_pure_color[UNPUSHED]}${_pure_symbol[UNPUSHED]}${_pure_color[RESET]}"
 	printf "\n"
 }
 
@@ -101,15 +104,15 @@ _pure_update_git_status()
 	local dirty remote
 	if _pure_git_intree
 	then
-		_pure_git_clean       || dirty=${_pure_symbol[DIRTY]}
-		_pure_git_show_remote && remote=$(_pure_echo_git_remote_status)
-
+		_pure_git_clean \
+			|| dirty=${_pure_symbol[DIRTY]}
+		_pure_git_show_remote \
+			&& remote=$(_pure_echo_git_remote_status)
 		_pure_global[git_status]="${_pure_color[STATUS]}$(_pure_git_show_current)$dirty${_pure_color[RESET]} $remote"
 	else
 		_pure_global[git_status]=""
 	fi
 }
-
 
 # if the last command failed, change prompt color and text
 _pure_update_prompt() 
@@ -124,59 +127,61 @@ _pure_update_prompt()
 	fi
 }
 
-
-# attempts to detect whether there is a remote session
-_pure_remote_session()
+_pure_save_prompt_command()
 {
-	   [[ -n "$SSH_CLIENT" ]] \
-	|| [[ -n "$SSH_TTY" ]] \
- 	|| [[ -n "$SSH_CONNECTION" ]] \
-	|| command -v pstree > /dev/null 2>&1 && pstree -s $$ | grep -q -E "sshd|wezterm-mux-ser" \
-	|| [[ -n "$_pure_test_remote" ]]	
+	[[ -z "${_pure_global[first_time]}" ]] \
+		&& _pure_global[first_time]="false" \
+		&& _pure_global[original_prompt_command]="${PROMPT_COMMAND}"
 }
 
-
-#### INITIALIZATION ##########################################################
-
-# save/reset $PROMPT_COMMAND for script idempotence
-[[ -z "${_pure_global[first_time]}" ]] \
-	&& _pure_global[first_time]="false" \
-	&& _pure_global[original_prompt_command]="${PROMPT_COMMAND}"
-PROMPT_COMMAND="${_pure_global[original_prompt_command]}"
-PROMPT_COMMAND=${PROMPT_COMMAND:+${PROMPT_COMMAND%;};}  # ensure PROMPT_COMMAND ends in ;
-
-# Clear colors if tput missing
-if ! command -v tput > /dev/null 2>&1
-then
+_pure_clear_colors()
+{
     for color in "${!_pure_color_table[@]}"
 	do
         _pure_color_table[$color]=""
     done
     _pure_color[RESET]=""
-fi
+}
 
-# set user color
-[[ ${UID} = 0 ]] \
-	&& _pure_global[user_color]=${_pure_color[ROOT]} \
-	|| _pure_global[user_color]=${_pure_color[USER]}
-
-# set user and host if its a remote session
-_pure_remote_session \
-	&& _pure_global[user_host]="${_pure_color[PROMPT]}[${_pure_color[HOST]}\u@\h${_pure_color[PROMPT]}] " \
-	|| _pure_global[user_host]=""
+_pure_set_user_color()
+{
+	[[ ${UID} = 0 ]] \
+		&& _pure_global[user_color]=${_pure_color[ROOT]} \
+		|| _pure_global[user_color]=${_pure_color[USER]}
+}
 
 
-#### RUN EVERY PROMPT ########################################################
+# attempts to detect whether there is a remote session
+_pure_set_remote_session()
+{
+	if     [[ -n "$SSH_CLIENT" ]] \
+		|| [[ -n "$SSH_TTY" ]] \
+ 		|| [[ -n "$SSH_CONNECTION" ]] \
+		|| command -v pstree > /dev/null 2>&1 && pstree -s $$ | grep -q -E "sshd|wezterm-mux-ser" \
+		|| [[ -n "$_pure_test_remote" ]]
+	then
+		_pure_global[user_host]="${_pure_color[PROMPT]}[${_pure_color[HOST]}\u@\h${_pure_color[PROMPT]}] "
+	else
+		_pure_global[user_host]=""
+	fi
+}
 
-# prompt color update must be first because it checks exit status
-PROMPT_COMMAND="_pure_update_prompt; ${PROMPT_COMMAND}"
 
-# if git isn't installed when shell launches, git integration isn't activated
+#### INITIALIZATION ##########################################################
+
+_pure_save_prompt_command
+
+command -v tput > /dev/null 2>&1 \
+	|| _pure_clear_colors
+
+_pure_set_user_color
+_pure_set_remote_session
+
+PROMPT_COMMAND="${_pure_global[original_prompt_command]}" # preserve previous PROMPT_COMMAND
+PROMPT_COMMAND=${PROMPT_COMMAND:+${PROMPT_COMMAND%;};}    # ensure PROMPT_COMMAND ends in ;
+PROMPT_COMMAND="_pure_update_prompt; ${PROMPT_COMMAND}"   # _pure_update_prompt must be first
 command -v git > /dev/null 2>&1 \
 	&& PROMPT_COMMAND+=" _pure_update_git_status;"
-
-
-#### SET PROMPT ##############################################################
 
 # Note: Variables that are updated/dynamic need to be escaped with a backslash.
 _pure_global[first_line]="${_pure_global[user_host]}${_pure_color[PROMPT]}\w \${_pure_global[git_status]}"

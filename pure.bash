@@ -22,22 +22,22 @@
 
 # tput color table
 declare -A _pure_color_table=(
-	[BLACK]=$(tput setaf 0)
-	[RED]=$(tput setaf 1)
-	[GREEN]=$(tput setaf 2)
-	[YELLOW]=$(tput setaf 3)
-	[BLUE]=$(tput setaf 4)
-	[MAGENTA]=$(tput setaf 5)
-	[CYAN]=$(tput setaf 6)
-	[WHITE]=$(tput setaf 7)
-	[BRIGHT_BLACK]=$(tput setaf 8)
-	[BRIGHT_RED]=$(tput setaf 9)
-	[BRIGHT_GREEN]=$(tput setaf 10)
-	[BRIGHT_YELLOW]=$(tput setaf 11)
-	[BRIGHT_BLUE]=$(tput setaf 12)
-	[BRIGHT_MAGENTA]=$(tput setaf 13)
-	[BRIGHT_CYAN]=$(tput setaf 14)
-	[BRIGHT_WHITE]=$(tput setaf 15)
+	[BLACK]=$(tput setaf 0 2>/dev/null)
+	[RED]=$(tput setaf 1 2>/dev/null)
+	[GREEN]=$(tput setaf 2 2>/dev/null)
+	[YELLOW]=$(tput setaf 3 2>/dev/null)
+	[BLUE]=$(tput setaf 4 2>/dev/null)
+	[MAGENTA]=$(tput setaf 5 2>/dev/null)
+	[CYAN]=$(tput setaf 6 2>/dev/null)
+	[WHITE]=$(tput setaf 7 2>/dev/null)
+	[BRIGHT_BLACK]=$(tput setaf 8 2>/dev/null)
+	[BRIGHT_RED]=$(tput setaf 9 2>/dev/null)
+	[BRIGHT_GREEN]=$(tput setaf 10 2>/dev/null)
+	[BRIGHT_YELLOW]=$(tput setaf 11 2>/dev/null)
+	[BRIGHT_BLUE]=$(tput setaf 12 2>/dev/null)
+	[BRIGHT_MAGENTA]=$(tput setaf 13 2>/dev/null)
+	[BRIGHT_CYAN]=$(tput setaf 14 2>/dev/null)
+	[BRIGHT_WHITE]=$(tput setaf 15 2>/dev/null)
 )
 
 declare -A _pure_global
@@ -66,7 +66,7 @@ declare -A _pure_color=(
 	[PROMPT]=${_pure_color_table[CYAN]}
 	[HOST]=${_pure_color_table[WHITE]}
 	[MULTILINE]=${_pure_color_table[BLUE]}
-	[RESET]=$(tput sgr0)
+	[RESET]=$(tput sgr0 2> /dev/null)
 )
 
 # symbol configuration
@@ -116,7 +116,7 @@ _pure_update_git_status()
 		_pure_git_clean \
 			|| dirty=${_pure_symbol[DIRTY]}
 		_pure_git_show_remote \
-			&& remote=" $(_pure_echo_git_remote_status)" 
+			&& remote=" $(_pure_echo_git_remote_status)"
 		_pure_git_show_stash \
 			&& stash=" $(_pure_echo_git_stash_status)"
 		_pure_global[git_status]="${_pure_color[STATUS]}$(_pure_git_show_current)$dirty${_pure_color[RESET]}${remote}${stash}"
@@ -126,8 +126,8 @@ _pure_update_git_status()
 }
 
 # if the last command failed, change prompt color and text
-_pure_update_prompt() 
-{ 
+_pure_update_prompt()
+{
 	if [[ $? = 0 ]]
 	then
 		_pure_global[prompt_text]=${_pure_symbol[PROMPT]}
@@ -140,25 +140,22 @@ _pure_update_prompt()
 
 _pure_save_prompt_command()
 {
-	[[ -z "${_pure_global[first_time]}" ]] \
-		&& _pure_global[first_time]="false" \
-		&& _pure_global[original_prompt_command]="${PROMPT_COMMAND}"
+	if [[ -z "${_pure_global[first_time]}" ]]
+	then
+		_pure_global[first_time]="false"
+		_pure_global[original_prompt_command]="${PROMPT_COMMAND}"
+	fi
 }
 
-_pure_clear_colors()
-{
-    for color in "${!_pure_color_table[@]}"
-	do
-        _pure_color_table[$color]=""
-    done
-    _pure_color[RESET]=""
-}
 
 _pure_set_user_color()
 {
-	[[ ${UID} = 0 ]] \
-		&& _pure_global[user_color]=${_pure_color[ROOT]} \
-		|| _pure_global[user_color]=${_pure_color[USER]}
+	if [[ ${UID} = 0 ]]
+	then
+	    _pure_global[user_color]=${_pure_color[ROOT]}
+	else
+		_pure_global[user_color]=${_pure_color[USER]}
+	fi
 }
 
 
@@ -173,8 +170,8 @@ _pure_detect_remote_session()
 }
 _pure_set_remote_session()
 {
-	if  [[ ${_pure_global[display_user_host]} = "always" ]] || \
-		[[ ! ${_pure_global[display_user_host]} = "never" ]] && _pure_detect_remote_session
+	if  [[   ${_pure_global[display_user_host]} = "always" ]] || \
+		( [[ ! ${_pure_global[display_user_host]} = "never"  ]] && _pure_detect_remote_session )
 	then
 		_pure_global[user_host]="${_pure_color[PROMPT]}[${_pure_color[HOST]}\u@\h${_pure_color[PROMPT]}] "
 	else
@@ -186,9 +183,6 @@ _pure_set_remote_session()
 #### INITIALIZATION ##########################################################
 
 _pure_save_prompt_command
-
-command -v tput > /dev/null 2>&1 \
-	|| _pure_clear_colors
 
 _pure_set_user_color
 _pure_set_remote_session

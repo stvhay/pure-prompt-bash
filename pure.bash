@@ -165,7 +165,7 @@ _pure_detect_remote_session()
 	   [[ -n "$SSH_CLIENT" ]] \
 	|| [[ -n "$SSH_TTY" ]] \
  	|| [[ -n "$SSH_CONNECTION" ]] \
-	|| command -v pstree > /dev/null 2>&1 && pstree -s $$ | grep -q -E "sshd|wezterm-mux-ser" \
+	|| ( command -v pstree 2>&1 > /dev/null && pstree -s $$ | grep -q -E "sshd|wezterm-mux-ser" ) \
 	|| [[ -n "$_pure_test_remote" ]]
 }
 _pure_set_remote_session()

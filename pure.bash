@@ -20,25 +20,29 @@
 
 #### CONSTANTS ###############################################################
 
-# tput color table
-declare -A _pure_color_table=(
-	[BLACK]=$(tput setaf 0 2>/dev/null)
-	[RED]=$(tput setaf 1 2>/dev/null)
-	[GREEN]=$(tput setaf 2 2>/dev/null)
-	[YELLOW]=$(tput setaf 3 2>/dev/null)
-	[BLUE]=$(tput setaf 4 2>/dev/null)
-	[MAGENTA]=$(tput setaf 5 2>/dev/null)
-	[CYAN]=$(tput setaf 6 2>/dev/null)
-	[WHITE]=$(tput setaf 7 2>/dev/null)
-	[BRIGHT_BLACK]=$(tput setaf 8 2>/dev/null)
-	[BRIGHT_RED]=$(tput setaf 9 2>/dev/null)
-	[BRIGHT_GREEN]=$(tput setaf 10 2>/dev/null)
-	[BRIGHT_YELLOW]=$(tput setaf 11 2>/dev/null)
-	[BRIGHT_BLUE]=$(tput setaf 12 2>/dev/null)
-	[BRIGHT_MAGENTA]=$(tput setaf 13 2>/dev/null)
-	[BRIGHT_CYAN]=$(tput setaf 14 2>/dev/null)
-	[BRIGHT_WHITE]=$(tput setaf 15 2>/dev/null)
-)
+if ! declare -p _pure_color_table >/dev/null 2>/dev/null
+then
+	# tput color table
+	declare -A _pure_color_table=(
+		[BLACK]=$(tput setaf 0 2>/dev/null)
+		[RED]=$(tput setaf 1 2>/dev/null)
+		[GREEN]=$(tput setaf 2 2>/dev/null)
+		[YELLOW]=$(tput setaf 3 2>/dev/null)
+		[BLUE]=$(tput setaf 4 2>/dev/null)
+		[MAGENTA]=$(tput setaf 5 2>/dev/null)
+		[CYAN]=$(tput setaf 6 2>/dev/null)
+		[WHITE]=$(tput setaf 7 2>/dev/null)
+		[BRIGHT_BLACK]=$(tput setaf 8 2>/dev/null)
+		[BRIGHT_RED]=$(tput setaf 9 2>/dev/null)
+		[BRIGHT_GREEN]=$(tput setaf 10 2>/dev/null)
+		[BRIGHT_YELLOW]=$(tput setaf 11 2>/dev/null)
+		[BRIGHT_BLUE]=$(tput setaf 12 2>/dev/null)
+		[BRIGHT_MAGENTA]=$(tput setaf 13 2>/dev/null)
+		[BRIGHT_CYAN]=$(tput setaf 14 2>/dev/null)
+		[BRIGHT_WHITE]=$(tput setaf 15 2>/dev/null)
+		[RESET]=$(tput sgr0 2> /dev/null)
+	)
+fi
 
 declare -A _pure_global
 # git_status              / stores the text to display for git status
@@ -66,7 +70,7 @@ declare -A _pure_color=(
 	[PROMPT]=${_pure_color_table[CYAN]}
 	[HOST]=${_pure_color_table[WHITE]}
 	[MULTILINE]=${_pure_color_table[BLUE]}
-	[RESET]=$(tput sgr0 2> /dev/null)
+	[RESET]=${_pure_color_table[RESET]}
 )
 
 # symbol configuration

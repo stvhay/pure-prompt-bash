@@ -194,8 +194,10 @@ _pure_set_remote_session
 PROMPT_COMMAND="${_pure_global[original_prompt_command]}" # preserve previous PROMPT_COMMAND
 PROMPT_COMMAND=${PROMPT_COMMAND:+${PROMPT_COMMAND%;};}    # ensure PROMPT_COMMAND ends in ;
 PROMPT_COMMAND="_pure_update_prompt; ${PROMPT_COMMAND}"   # _pure_update_prompt must be first
-command -v git > /dev/null 2>&1 \
-	&& PROMPT_COMMAND+=" _pure_update_git_status;"
+if command -v git > /dev/null 2>&1
+then
+	PROMPT_COMMAND+=" _pure_update_git_status;"
+fi
 
 # Note: Variables that are updated/dynamic need to be escaped with a backslash.
 _pure_global[first_line]="${_pure_global[user_host]}${_pure_color[PROMPT]}${_pure_symbol[PS1]}\${_pure_global[git_status]}"

@@ -156,7 +156,7 @@ _pure_set_user_color()
 {
 	if [[ ${UID} = 0 ]]
 	then
-	    _pure_global[user_color]=${_pure_color[ROOT]}
+		_pure_global[user_color]=${_pure_color[ROOT]}
 	else
 		_pure_global[user_color]=${_pure_color[USER]}
 	fi

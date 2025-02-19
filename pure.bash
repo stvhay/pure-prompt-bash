@@ -2,7 +2,8 @@
 
 # pure prompt on bash
 #
-# Pretty, minimal BASH prompt, inspired by sindresorhus/pure(https://github.com/sindresorhus/pure)
+# Pretty, minimal BASH prompt, inspired by
+#  sindresorhus/pure(https://github.com/sindresorhus/pure)
 #
 # Author: Hiroshi Krashiki(Krashikiworks)
 # released under MIT License, see LICENSE
@@ -14,9 +15,30 @@
 # - Added color configuration (by editing script)
 # - Indents PS2 four spaces
 # - Improved the compatibility of the grep command for BSD and Linux
+# - Added tput wrapper for option to force color
 #
 # Author: Steve Hay (stvhay)
 
+#### TPUT WRAPPER ############################################################
+
+if [[ "$1" == "--force-color" ]]
+then
+    _pure_force_color=true
+fi
+
+_pure_tput()
+{
+    if [[ "$_pure_force_color" != true ]]
+    then
+        tput "$@"
+    else
+        case "$1" in
+            setaf) printf "\033[38;5;%dm" "$2" ;;
+            sgr0) printf "\033[0m" ;;
+            *) ;;
+        esac
+    fi
+}
 
 #### CONSTANTS ###############################################################
 
@@ -24,23 +46,23 @@ if ! declare -p _pure_color_table >/dev/null 2>/dev/null
 then
 	# tput color table
 	declare -A _pure_color_table=(
-		[BLACK]=$(tput setaf 0 2>/dev/null)
-		[RED]=$(tput setaf 1 2>/dev/null)
-		[GREEN]=$(tput setaf 2 2>/dev/null)
-		[YELLOW]=$(tput setaf 3 2>/dev/null)
-		[BLUE]=$(tput setaf 4 2>/dev/null)
-		[MAGENTA]=$(tput setaf 5 2>/dev/null)
-		[CYAN]=$(tput setaf 6 2>/dev/null)
-		[WHITE]=$(tput setaf 7 2>/dev/null)
-		[BRIGHT_BLACK]=$(tput setaf 8 2>/dev/null)
-		[BRIGHT_RED]=$(tput setaf 9 2>/dev/null)
-		[BRIGHT_GREEN]=$(tput setaf 10 2>/dev/null)
-		[BRIGHT_YELLOW]=$(tput setaf 11 2>/dev/null)
-		[BRIGHT_BLUE]=$(tput setaf 12 2>/dev/null)
-		[BRIGHT_MAGENTA]=$(tput setaf 13 2>/dev/null)
-		[BRIGHT_CYAN]=$(tput setaf 14 2>/dev/null)
-		[BRIGHT_WHITE]=$(tput setaf 15 2>/dev/null)
-		[RESET]=$(tput sgr0 2> /dev/null)
+		[BLACK]=$(_pure_tput setaf 0 2>/dev/null)
+		[RED]=$(_pure_tput setaf 1 2>/dev/null)
+		[GREEN]=$(_pure_tput setaf 2 2>/dev/null)
+		[YELLOW]=$(_pure_tput setaf 3 2>/dev/null)
+		[BLUE]=$(_pure_tput setaf 4 2>/dev/null)
+		[MAGENTA]=$(_pure_tput setaf 5 2>/dev/null)
+		[CYAN]=$(_pure_tput setaf 6 2>/dev/null)
+		[WHITE]=$(_pure_tput setaf 7 2>/dev/null)
+		[BRIGHT_BLACK]=$(_pure_tput setaf 8 2>/dev/null)
+		[BRIGHT_RED]=$(_pure_tput setaf 9 2>/dev/null)
+		[BRIGHT_GREEN]=$(_pure_tput setaf 10 2>/dev/null)
+		[BRIGHT_YELLOW]=$(_pure_tput setaf 11 2>/dev/null)
+		[BRIGHT_BLUE]=$(_pure_tput setaf 12 2>/dev/null)
+		[BRIGHT_MAGENTA]=$(_pure_tput setaf 13 2>/dev/null)
+		[BRIGHT_CYAN]=$(_pure_tput setaf 14 2>/dev/null)
+		[BRIGHT_WHITE]=$(_pure_tput setaf 15 2>/dev/null)
+		[RESET]=$(_pure_tput sgr0 2> /dev/null)
 	)
 fi
 

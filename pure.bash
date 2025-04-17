@@ -205,6 +205,16 @@ _pure_set_remote_session()
 	fi
 }
 
+_pure_detect_chroot()
+{
+	if [[ $(ls -di / | grep -o -E '^[0-9]+') == "2" ]]
+	then
+	    _pure_global[chroot]=""
+	else
+		_pure_global[chroot]=" chrooted "
+	fi
+}
+
 
 #### INITIALIZATION ##########################################################
 
@@ -212,6 +222,7 @@ _pure_save_prompt_command
 
 _pure_set_user_color
 _pure_set_remote_session
+_pure_detect_chroot
 
 PROMPT_COMMAND="${_pure_global[original_prompt_command]}" # preserve previous PROMPT_COMMAND
 PROMPT_COMMAND=${PROMPT_COMMAND:+${PROMPT_COMMAND%;};}    # ensure PROMPT_COMMAND ends in ;
@@ -222,7 +233,7 @@ then
 fi
 
 # Note: Variables that are updated/dynamic need to be escaped with a backslash.
-_pure_global[first_line]="${_pure_global[user_host]}${_pure_color[PROMPT]}${_pure_symbol[PS1]}\${_pure_global[git_status]}"
+_pure_global[first_line]="${_pure_global[user_host]}${_pure_global[chroot]}${_pure_color[PROMPT]}${_pure_symbol[PS1]}\${_pure_global[git_status]}"
 _pure_global[second_line]="\[\${_pure_global[prompt_color]}\]\${_pure_global[prompt_text]}\[${_pure_color[RESET]}\] "
 PS1="\n${_pure_global[first_line]}\n${_pure_global[second_line]}"
 PS2="\[${_pure_color[MULTILINE]}\]${_pure_symbol[PROMPT]}\[${_pure_color[RESET]}\] ${_pure_symbol[INDENT]}"

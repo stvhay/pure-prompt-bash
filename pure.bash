@@ -30,11 +30,13 @@ _pure_tput()
 {
     if [[ "$_pure_force_color" != true ]]
     then
+        printf '\001'
         tput "$@"
+        printf '\002'
     else
         case "$1" in
-            setaf) printf "\033[38;5;%dm" "$2" ;;
-            sgr0) printf "\033[0m" ;;
+            setaf) printf "\001\033[38;5;%dm\002" "$2" ;;
+            sgr0) printf "\001\033[0m\002" ;;
             *) ;;
         esac
     fi
@@ -234,6 +236,6 @@ fi
 
 # Note: Variables that are updated/dynamic need to be escaped with a backslash.
 _pure_global[first_line]="${_pure_global[user_host]}${_pure_global[chroot]}${_pure_color[PROMPT]}${_pure_symbol[PS1]}\${_pure_global[git_status]}"
-_pure_global[second_line]="\[\${_pure_global[prompt_color]}\]\${_pure_global[prompt_text]}\[${_pure_color[RESET]}\] "
+_pure_global[second_line]="\${_pure_global[prompt_color]}\${_pure_global[prompt_text]}${_pure_color[RESET]} "
 PS1="\n${_pure_global[first_line]}\n${_pure_global[second_line]}"
-PS2="\[${_pure_color[MULTILINE]}\]${_pure_symbol[PROMPT]}\[${_pure_color[RESET]}\] ${_pure_symbol[INDENT]}"
+PS2="${_pure_color[MULTILINE]}${_pure_symbol[PROMPT]}${_pure_color[RESET]} ${_pure_symbol[INDENT]}"

@@ -86,6 +86,8 @@ fi
 #### CONFIGURATION ###########################################################
 
 # color configuration
+if ! declare -p _pure_color >/dev/null 2>/dev/null
+then
 declare -A _pure_color=(
 	[UNPULLED]=${_pure_color_table[BRIGHT_RED]}
 	[UNPUSHED]=${_pure_color_table[BRIGHT_BLUE]}
@@ -99,8 +101,11 @@ declare -A _pure_color=(
 	[MULTILINE]=${_pure_color_table[BLUE]}
 	[RESET]=${_pure_color_table[RESET]}
 )
+fi
 
 # symbol configuration
+if ! declare -p _pure_symbol >/dev/null 2>/dev/null
+then
 declare -A _pure_symbol=(
 	[PROMPT]="❯"
 	[PROMPT_FAIL]="⚠"
@@ -110,12 +115,13 @@ declare -A _pure_symbol=(
 	[STASH]="≡"
 	[PS1]="\w "
 	[INDENT]="    ")
+fi
 
 
 #### FUNCTIONS ###############################################################
 
 # no unpulled has -0 / no unpushed has +0
-_pure_git_lines()    { git status --porcelain=2 --branch | grep -Eo -- "\\$1[0-9]+"; }
+_pure_git_lines()    { git status --porcelain=2 --branch | grep '^# branch.ab' | grep -Eo -- "\\$1[0-9]+"; }
 _pure_git_unpulled() { [[ "-0" != $(_pure_git_lines "-") ]]; }
 _pure_git_unpushed() { [[ "+0" != $(_pure_git_lines "+") ]]; }
 _pure_echo_git_remote_status()

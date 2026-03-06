@@ -68,7 +68,10 @@ then
 	)
 fi
 
-declare -A _pure_global
+if ! declare -p _pure_global >/dev/null 2>/dev/null
+then
+	declare -A _pure_global
+fi
 # git_status              / stores the text to display for git status
 # first_time              / blank if first run of script
 # original_prompt_command / saved before script runs
@@ -112,7 +115,7 @@ declare -A _pure_symbol=(
 #### FUNCTIONS ###############################################################
 
 # no unpulled has -0 / no unpushed has +0
-_pure_git_lines()    { git status --porcelain=2 --branch | grep -Eo "\$1[0-9]"; }
+_pure_git_lines()    { git status --porcelain=2 --branch | grep -Eo -- "\\$1[0-9]+"; }
 _pure_git_unpulled() { [[ "-0" != $(_pure_git_lines "-") ]]; }
 _pure_git_unpushed() { [[ "+0" != $(_pure_git_lines "+") ]]; }
 _pure_echo_git_remote_status()
@@ -133,9 +136,9 @@ _pure_echo_git_stash_status()
 # Updates git_status for use in the prompt.
 _pure_git_intree()       { [[ $(git rev-parse --is-inside-work-tree 2> /dev/null) == "true" ]]; }
 _pure_git_show_current() { git branch --show-current; }
-_pure_git_clean()        { git diff --quiet; }
+_pure_git_clean()        { git diff --quiet && git diff --cached --quiet; }
 _pure_git_show_remote()  { [[ -n $(git remote show) ]]; }
-_pure_git_show_stash()   { [ -f .git/refs/stash ]; }
+_pure_git_show_stash()   { git rev-parse --verify refs/stash >/dev/null 2>&1; }
 _pure_update_git_status()
 {
 	local dirty remote stash
@@ -187,13 +190,27 @@ _pure_set_user_color()
 }
 
 
+# walks process tree via ps to detect remote sessions
+_pure_check_process_tree()
+{
+	local pid=$$
+	while [[ $pid -ne 1 && $pid -ne 0 ]]
+	do
+		local comm
+		comm=$(ps -o comm= -p "$pid" 2>/dev/null) || return 1
+		[[ "$comm" =~ sshd|wezterm-mux-ser ]] && return 0
+		pid=$(ps -o ppid= -p "$pid" 2>/dev/null | tr -d ' ')
+	done
+	return 1
+}
+
 # attempts to detect whether there is a remote session
 _pure_detect_remote_session()
 {
 	   [[ -n "$SSH_CLIENT" ]] \
 	|| [[ -n "$SSH_TTY" ]] \
  	|| [[ -n "$SSH_CONNECTION" ]] \
-	|| ( command -v pstree > /dev/null 2>&1 && pstree -s $$ | grep -q -E "sshd|wezterm-mux-ser" ) \
+	|| _pure_check_process_tree \
 	|| [[ -n "$_pure_test_remote" ]]
 }
 _pure_set_remote_session()
@@ -207,13 +224,28 @@ _pure_set_remote_session()
 	fi
 }
 
-_pure_detect_chroot()
+_pure_detect_container_or_chroot()
 {
-	if [[ $(ls -di / | grep -o -E '^[0-9]+') == "2" ]]
+	local pid1_comm
+	if [[ -r /proc/1/sched ]]
 	then
-	    _pure_global[chroot]=""
+		pid1_comm=$(head -1 /proc/1/sched 2>/dev/null | grep -oE '^[^ (]+')
 	else
+		pid1_comm=$(basename "$(ps -o comm= -p 1 2>/dev/null)")
+	fi
+
+	if [[ -n "$pid1_comm" ]] && ! [[ "$pid1_comm" =~ ^(systemd|init|launchd|openrc|runit|s6-svscan)$ ]]
+	then
+		_pure_global[chroot]=" container "
+	elif command -v ischroot >/dev/null 2>&1 && ischroot 2>/dev/null
+	then
 		_pure_global[chroot]=" chrooted "
+	elif [[ -r /proc/1/root ]] \
+		&& [[ "$(stat -Lc %d:%i / 2>/dev/null)" != "$(stat -Lc %d:%i /proc/1/root 2>/dev/null)" ]]
+	then
+		_pure_global[chroot]=" chrooted "
+	else
+		_pure_global[chroot]=""
 	fi
 }
 
@@ -224,14 +256,18 @@ _pure_save_prompt_command
 
 _pure_set_user_color
 _pure_set_remote_session
-_pure_detect_chroot
+_pure_detect_container_or_chroot
 
-PROMPT_COMMAND="${_pure_global[original_prompt_command]}" # preserve previous PROMPT_COMMAND
-PROMPT_COMMAND=${PROMPT_COMMAND:+${PROMPT_COMMAND%;};}    # ensure PROMPT_COMMAND ends in ;
-PROMPT_COMMAND="_pure_update_prompt; ${PROMPT_COMMAND}"   # _pure_update_prompt must be first
-if command -v git > /dev/null 2>&1
+if [[ -z "${_pure_global[prompt_initialized]}" ]]
 then
-	PROMPT_COMMAND+=" _pure_update_git_status;"
+	_pure_global[prompt_initialized]="true"
+	PROMPT_COMMAND="${_pure_global[original_prompt_command]}" # preserve previous PROMPT_COMMAND
+	PROMPT_COMMAND=${PROMPT_COMMAND:+${PROMPT_COMMAND%;};}    # ensure PROMPT_COMMAND ends in ;
+	PROMPT_COMMAND="_pure_update_prompt; ${PROMPT_COMMAND}"   # _pure_update_prompt must be first
+	if command -v git > /dev/null 2>&1
+	then
+		PROMPT_COMMAND+=" _pure_update_git_status;"
+	fi
 fi
 
 # Note: Variables that are updated/dynamic need to be escaped with a backslash.
